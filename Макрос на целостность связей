@@ -1,0 +1,73 @@
+Sub GenerateSQLScripts()
+
+    ' Объявление переменных
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim dataLayer As String
+    Dim tableNm As String
+    Dim attr As String
+    Dim tableNm2 As String
+    Dim PK As String
+    Dim sqlScript As String
+    Dim i As Long
+
+    On Error GoTo ErrorHandler
+    
+    ' Устанавливаем активный лист
+    Set ws = ThisWorkbook.ActiveSheet
+    
+    ' Находим последнюю заполненную строку в столбце A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Проходим по каждой строке, начиная со второй (предполагаем, что в первой строке заголовки)
+    For i = 2 To lastRow
+        ' Читаем параметры из столбцов
+        If Trim(ws.Cells(i, 1).Value) <> "" And Trim(ws.Cells(i, 2).Value) <> "" And _
+           Trim(ws.Cells(i, 3).Value) <> "" And Trim(ws.Cells(i, 4).Value) <> "" And _
+           Trim(ws.Cells(i, 5).Value) <> "" Then
+            
+            dataLayer = ws.Cells(i, 1).Value   ' Столбец A
+            tableNm = ws.Cells(i, 2).Value     ' Столбец B
+            attr = ws.Cells(i, 3).Value        ' Столбец C
+            tableNm2 = ws.Cells(i, 4).Value    ' Столбец D
+            PK = ws.Cells(i, 5).Value          ' Столбец E
+            
+            ' Формируем SQL-скрипт с использованием параметров
+            sqlScript = "insert into work.test_dq_log_attr_cnt (" & vbCrLf & _
+                        "    load_dttm, " & vbCrLf & _
+                        "    source_load_dttm," & vbCrLf & _
+                        "    data_layer, " & vbCrLf & _
+                        "    table_nm, " & vbCrLf & _
+                        "    attr,  " & vbCrLf & _
+                        "    check_type, " & vbCrLf & _
+                        "    error_cnt" & vbCrLf & _
+                        ")" & vbCrLf & _
+                        "SELECT" & vbCrLf & _
+                        "    now()::date AS load_dttm," & vbCrLf & _
+                        "    load_dttm as source_load_dttm," & vbCrLf & _
+                        "    '" & dataLayer & "' AS data_layer," & vbCrLf & _
+                        "    '" & tableNm & "' AS table_nm," & vbCrLf & _
+                        "    '" & attr & "' AS attr," & vbCrLf & _
+                        "    'Проверка ссылочной целостности' AS check_type," & vbCrLf & _
+                        "    COUNT(*) FILTER (WHERE " & attr & " NOT IN (SELECT " & PK & " FROM " & dataLayer & "." & tableNm2 & ")) AS error_cnt " & vbCrLf & _
+                        "FROM " & dataLayer & "." & tableNm & vbCrLf & _
+                        "group by load_dttm" & vbCrLf & _
+                        "ON CONFLICT (load_dttm, source_load_dttm, data_layer, table_nm, attr, check_type)" & vbCrLf & _
+                        "DO NOTHING;"
+            
+            ' Записываем сгенерированный SQL-скрипт в столбец F
+            ws.Cells(i, 6).Value = sqlScript
+        End If
+    Next i
+
+    ' Уведомление об успешной генерации
+    MsgBox "SQL-скрипты успешно сгенерированы!", vbInformation
+    
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Произошла ошибка: " & Err.Description, vbCritical
+
+End Sub
+
+
