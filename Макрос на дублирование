@@ -1,0 +1,48 @@
+Sub GenerateSQLScript()
+
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim dataLayer As String
+    Dim tableNm As String
+    Dim attr As String
+    Dim outputCol As Long
+    Dim i As Long
+
+    ' Указываем текущий лист
+    Set ws = ThisWorkbook.Sheets(1)
+    
+    ' Найти последний заполненный ряд в колонке "A" (или другом, в зависимости от структуры данных)
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    
+    ' Указываем колонку выходных данных (где будет размещен результат)
+    outputCol = 5 ' Например, в колонке "E"
+
+    ' Цикл по всем строкам с данными
+    For i = 2 To lastRow ' Предполагается, что первая строка содержит заголовки
+        dataLayer = ws.Cells(i, 1).Value ' Колонка A — data_layer
+        tableNm = ws.Cells(i, 2).Value   ' Колонка B — table_nm
+        attr = ws.Cells(i, 3).Value      ' Колонка C — attr
+
+        ' Генерация SQL-скрипта и запись в выходную колонку
+        ws.Cells(i, outputCol).Value = "INSERT INTO work.test_dq_log_data_duplication (" & vbCrLf & _
+            "    load_dttm," & vbCrLf & _
+            "    data_layer," & vbCrLf & _
+            "    table_nm," & vbCrLf & _
+            "    attr," & vbCrLf & _
+            "    uniq_cnt," & vbCrLf & _
+            "    total_cnt)" & vbCrLf & _
+            "SELECT" & vbCrLf & _
+            "    now()::date AS load_dttm, --Техническая дата запуска дага" & vbCrLf & _
+            "    '" & dataLayer & "' AS data_layer," & vbCrLf & _
+            "    '" & tableNm & "' AS table_nm," & vbCrLf & _
+            "    '" & attr & "' AS attr," & vbCrLf & _
+            "    count(distinct " & attr & ") as uniq_cnt," & vbCrLf & _
+            "    count(*) as total_cnt" & vbCrLf & _
+            "FROM " & dataLayer & "." & tableNm & vbCrLf & _
+            "ON CONFLICT (load_dttm, data_layer, table_nm, attr)" & vbCrLf & _
+            "DO NOTHING;"
+    Next i
+
+    MsgBox "SQL скрипты успешно сгенерированы!", vbInformation
+
+End Sub
