@@ -1,0 +1,56 @@
+Sub GenerateSQLScripts()
+
+    ' Переменные
+    Dim ws As Worksheet
+    Dim dataLayer As String
+    Dim tableNm As String
+    Dim attr As String
+    Dim regexp As String
+    Dim sqlScript As String
+    Dim lastRow As Long
+    Dim i As Long
+    
+    ' Установка активного рабочего листа
+    Set ws = ThisWorkbook.ActiveSheet
+    
+    ' Определение последней строки с данными в столбце A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Проход по строкам с данными
+    For i = 2 To lastRow
+        ' Получение данных из столбцов
+        dataLayer = ws.Cells(i, 1).Value ' столбец A
+        tableNm = ws.Cells(i, 2).Value   ' столбец B
+        attr = ws.Cells(i, 3).Value     ' столбец C
+        regexp = ws.Cells(i, 4).Value   ' столбец D
+        
+        ' Генерация SQL-скрипта на основе шаблона
+        sqlScript = "insert into work.test_dq_log_attr_cnt (" & vbCrLf & _
+                    "    load_dttm," & vbCrLf & _
+                    "    source_load_dttm," & vbCrLf & _
+                    "    data_layer," & vbCrLf & _
+                    "    table_nm," & vbCrLf & _
+                    "    attr," & vbCrLf & _
+                    "    check_type," & vbCrLf & _
+                    "    error_cnt" & vbCrLf & _
+                    ")" & vbCrLf & _
+                    "SELECT" & vbCrLf & _
+                    "    now()::date AS load_dttm," & vbCrLf & _
+                    "    load_dttm as source_load_dttm," & vbCrLf & _
+                    "    '" & dataLayer & "' AS data_layer," & vbCrLf & _
+                    "    '" & tableNm & "' AS table_nm," & vbCrLf & _
+                    "    '" & attr & "' AS attr," & vbCrLf & _
+                    "    'Проверка соответствия типу' AS check_type," & vbCrLf & _
+                    "    COUNT(*) FILTER (WHERE " & attr & " !~ '" & regexp & "') AS error_cnt" & vbCrLf & _
+                    "FROM " & dataLayer & "." & tableNm & vbCrLf & _
+                    "group by load_dttm" & vbCrLf & _
+                    "ON CONFLICT (load_dttm, source_load_dttm, data_layer, table_nm, attr, check_type)" & vbCrLf & _
+                    "DO NOTHING;"
+        
+        ' Запись результата в столбец E
+        ws.Cells(i, 5).Value = sqlScript
+    Next i
+
+End Sub
+
+
